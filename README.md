@@ -110,7 +110,7 @@ FINANCE_MANAGEMENT
 │   └── index.css        # Global Styles (Tailwind directives)
 ├── package.json         # Project dependencies
 └── README.md            # Documentation
-
+```
 ---
 
 ## 🔮 Future Improvements
