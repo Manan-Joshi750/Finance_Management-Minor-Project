@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic } from 'react-icons/fa';
+import { parseSMS } from '../utils/smsParser'; // Import the parser we just made
 
 const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
   const [filteredTransactions, setFilteredTransactions] = useState([]);
@@ -12,6 +13,10 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
     endDate: '',
   });
   const [isLoading, setIsLoading] = useState(true);
+  
+  // --- NEW: SMS Modal State ---
+  const [showSMSModal, setShowSMSModal] = useState(false);
+  const [smsText, setSmsText] = useState('');
   
   // Hidden input reference for file upload
   const fileInputRef = useRef(null);
@@ -92,6 +97,27 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
   const handleDeleteClick = (id) => {
     if (window.confirm("Are you sure you want to delete this transaction? This cannot be undone.")) {
       onDelete(id);
+    }
+  };
+
+  // --- NEW: SMART SMS PARSER HANDLER ---
+  const handleSMSParse = () => {
+    const result = parseSMS(smsText);
+    if (result && result.amount > 0) {
+      // Create the transaction object
+      const newTx = {
+        id: Date.now(),
+        ...result
+      };
+      
+      // Confirm with user before adding
+      if(window.confirm(`Parsed Transaction:\nTitle: ${newTx.title}\nAmount: ${newTx.amount}\nType: ${newTx.type}\n\nAdd this?`)) {
+        onImport([newTx]); // Re-use existing import logic
+        setSmsText('');
+        setShowSMSModal(false);
+      }
+    } else {
+      alert("Could not understand that SMS. Make sure it contains 'Rs' and 'debited/credited'.");
     }
   };
 
@@ -215,6 +241,14 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
             />
           </div>
           
+          {/* NEW: Smart SMS Button */}
+          <button 
+            onClick={() => setShowSMSModal(true)}
+            className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
+          >
+            <FaMagic className="mr-2" /> AI Scan
+          </button>
+
           {/* Import Button */}
           <input 
             type="file" 
@@ -362,7 +396,6 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
                     )}
                   </div>
                 </th>
-                {/* NEW: Action Column Header */}
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
                 </th>
@@ -392,15 +425,14 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
                     >
                       {transaction.type === 'income' ? '+' : '-'}Rs. {transaction.amount.toFixed(2)}
                     </td>
-                    {/* NEW: Delete Button Cell */}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                       <button 
-                         onClick={() => handleDeleteClick(transaction.id)}
-                         className="text-red-500 hover:text-red-700 transition-colors"
-                         title="Delete Transaction"
-                       >
-                         <FaTrash />
-                       </button>
+                        <button 
+                          onClick={() => handleDeleteClick(transaction.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Delete Transaction"
+                        >
+                          <FaTrash />
+                        </button>
                     </td>
                   </tr>
                 ))
@@ -415,6 +447,40 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
           </table>
         </div>
       </div>
+
+      {/* --- NEW: SMS Parser Modal --- */}
+      {showSMSModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 className="text-xl font-bold mb-4 flex items-center">
+              <FaMagic className="text-purple-600 mr-2" /> Parse Transaction
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Paste a bank SMS below (e.g., "Rs 500 debited for Coffee at Starbucks").
+            </p>
+            <textarea 
+              className="w-full border rounded p-2 h-32 mb-4"
+              placeholder="Paste SMS here..."
+              value={smsText}
+              onChange={(e) => setSmsText(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowSMSModal(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSMSParse}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Auto-Detect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

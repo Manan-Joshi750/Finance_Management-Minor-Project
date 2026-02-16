@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionHistory from './pages/TransactionHistory';
+import FinancialGoals from './pages/FinancialGoals'; // <--- IMPORT NEW PAGE
 import Navbar from './components/Navbar';
 
 // Initial mock data
@@ -71,7 +72,7 @@ function App() {
     ]);
   };
 
-  // --- NEW: DELETE FUNCTION ---
+  // --- DELETE FUNCTION ---
   const deleteTransaction = (idToDelete) => {
     setTransactions(prevTransactions => 
       prevTransactions.filter(transaction => transaction.id !== idToDelete)
@@ -93,9 +94,12 @@ function App() {
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <Routes>
+            {/* Dashboard */}
             <Route path="/" element={<Dashboard transactions={transactions} />} />
+            
+            {/* Add Transaction (Updated path to match Navbar) */}
             <Route 
-              path="/add-transaction" 
+              path="/add" 
               element={
                 <AddTransaction 
                   onAddTransaction={addTransaction} 
@@ -103,16 +107,26 @@ function App() {
                 />
               } 
             />
+            
+            {/* Transaction History (Updated path to match Navbar) */}
             <Route 
-              path="/transactions" 
+              path="/history" 
               element={
                 <TransactionHistory 
                    transactions={transactions} 
                    onImport={importTransactions} 
-                   onDelete={deleteTransaction} // <--- Passing the delete capability down!
+                   onDelete={deleteTransaction}
                 />
               } 
             />
+
+            {/* NEW: Financial Goals Route */}
+            <Route 
+              path="/goals" 
+              element={<FinancialGoals transactions={transactions} />} 
+            />
+
+            {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
