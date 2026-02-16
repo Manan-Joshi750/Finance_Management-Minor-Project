@@ -1,14 +1,16 @@
 import React from 'react';
-import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaTrash } from 'react-icons/fa';
 
-const TransactionTable = ({ transactions, showCategory = true }) => {
+const TransactionTable = ({ transactions, showCategory = true, onDelete }) => {
+  
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto shadow-sm rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -26,18 +28,24 @@ const TransactionTable = ({ transactions, showCategory = true }) => {
             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Amount
             </th>
+            {onDelete && (
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Action
+                </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {transactions.map((transaction) => (
-            <tr key={transaction.id} className="hover:bg-gray-50">
+            <tr key={transaction.id || transaction._id} className="hover:bg-gray-50">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full ${transaction.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                     {transaction.type === 'income' ? <FaArrowUp /> : <FaArrowDown />}
                   </div>
                   <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">{transaction.title}</div>
+                    {/* Handle both 'title' (frontend) and 'text' (backend) */}
+                    <div className="text-sm font-medium text-gray-900">{transaction.title || transaction.text}</div>
                   </div>
                 </div>
               </td>
@@ -54,8 +62,19 @@ const TransactionTable = ({ transactions, showCategory = true }) => {
               <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium ${
                 transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
               }`}>
-                {transaction.type === 'income' ? '+' : '-'}Rs. {Math.abs(transaction.amount).toFixed(2)}
+                {transaction.type === 'income' ? '+' : '-'} Rs. {Math.abs(transaction.amount).toFixed(2)}
               </td>
+              
+              {onDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                     <button 
+                        onClick={() => onDelete(transaction.id || transaction._id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                     >
+                        <FaTrash />
+                     </button>
+                  </td>
+              )}
             </tr>
           ))}
         </tbody>

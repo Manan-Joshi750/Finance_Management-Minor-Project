@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios'; // 🔌 Connect to Backend
 import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic } from 'react-icons/fa';
-import { parseSMS } from '../utils/smsParser'; // Import the parser we just made
+import { parseSMS } from '../utils/smsParser'; 
 
-const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
+const TransactionHistory = () => {
+  // We removed props because we now fetch our own data!
+  const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
@@ -14,46 +17,65 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
   });
   const [isLoading, setIsLoading] = useState(true);
   
-  // --- NEW: SMS Modal State ---
+  // SMS Modal State
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [smsText, setSmsText] = useState('');
   
-  // Hidden input reference for file upload
   const fileInputRef = useRef(null);
 
-  // Initialize filtered transactions
-  useEffect(() => {
-    if (transactions) {
-      setFilteredTransactions(transactions);
+  // 🔌 FETCH DATA FROM BACKEND
+  const fetchTransactions = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/transactions');
+      
+      // Map Backend fields (_id, text) to Frontend fields (id, title)
+      const mappedData = res.data.map(item => ({
+        ...item,
+        id: item._id,     // Backend uses _id
+        title: item.text, // Backend uses text
+        // Ensure amount is a number
+        amount: Math.abs(item.amount) 
+      }));
+
+      setTransactions(mappedData);
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
       setIsLoading(false);
     }
+  };
+
+  // Initial Load
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  // Update filtered list when transactions change
+  useEffect(() => {
+    setFilteredTransactions(transactions);
   }, [transactions]);
 
-  // Apply filters and sorting
+  // Apply filters and sorting (Kept your logic exactly as is)
   useEffect(() => {
     let result = [...transactions];
 
-    // Apply search
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(tx => 
-        tx.title.toLowerCase().includes(term) ||
-        tx.category.toLowerCase().includes(term) ||
+        (tx.title && tx.title.toLowerCase().includes(term)) ||
+        (tx.category && tx.category.toLowerCase().includes(term)) ||
         tx.amount.toString().includes(term)
       );
     }
 
-    // Apply type filter
     if (filters.type !== 'all') {
       result = result.filter(tx => tx.type === filters.type);
     }
 
-    // Apply category filter
     if (filters.category !== 'all') {
       result = result.filter(tx => tx.category === filters.category);
     }
 
-    // Apply date range filter
     if (filters.startDate) {
       result = result.filter(tx => tx.date >= filters.startDate);
     }
@@ -61,7 +83,6 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
       result = result.filter(tx => tx.date <= filters.endDate);
     }
 
-    // Apply sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -93,39 +114,70 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
     }));
   };
 
-  // --- DELETE FEATURE ---
-  const handleDeleteClick = (id) => {
-    if (window.confirm("Are you sure you want to delete this transaction? This cannot be undone.")) {
-      onDelete(id);
+  // 🔌 DELETE FROM BACKEND
+  const handleDeleteClick = async (id) => {
+    if (window.confirm("Are you sure you want to delete this transaction?")) {
+      try {
+        await axios.delete(`http://localhost:5000/api/transactions/${id}`);
+        // Remove from local state immediately for speed
+        setTransactions(transactions.filter(tx => tx.id !== id));
+      } catch (err) {
+        console.error("Error deleting transaction:", err);
+        alert("Failed to delete transaction.");
+      }
     }
   };
 
-  // --- NEW: SMART SMS PARSER HANDLER ---
+  // 🔌 SAVE IMPORTED DATA TO BACKEND
+  const saveImportedTransactions = async (newTransactions) => {
+    try {
+      // We process them one by one or in parallel
+      const promises = newTransactions.map(tx => {
+        // Convert to backend format
+        const backendTx = {
+            text: tx.title,
+            amount: tx.type === 'expense' ? -Math.abs(tx.amount) : Math.abs(tx.amount),
+            category: tx.category,
+            type: tx.type,
+            date: tx.date
+        };
+        return axios.post('http://localhost:5000/api/transactions', backendTx);
+      });
+
+      await Promise.all(promises);
+      alert(`Successfully saved ${newTransactions.length} transactions to database!`);
+      fetchTransactions(); // Refresh list
+    } catch (err) {
+        console.error("Error saving imports:", err);
+        alert("Error saving some transactions to the database.");
+    }
+  };
+
+  // SMS HANDLER
   const handleSMSParse = () => {
     const result = parseSMS(smsText);
     if (result && result.amount > 0) {
-      // Create the transaction object
       const newTx = {
         id: Date.now(),
-        ...result
+        ...result,
+        date: new Date().toISOString().split('T')[0] // Default to today
       };
       
-      // Confirm with user before adding
-      if(window.confirm(`Parsed Transaction:\nTitle: ${newTx.title}\nAmount: ${newTx.amount}\nType: ${newTx.type}\n\nAdd this?`)) {
-        onImport([newTx]); // Re-use existing import logic
+      if(window.confirm(`Parsed:\n${newTx.title}\nAmount: ${newTx.amount}\n\nAdd this?`)) {
+        saveImportedTransactions([newTx]);
         setSmsText('');
         setShowSMSModal(false);
       }
     } else {
-      alert("Could not understand that SMS. Make sure it contains 'Rs' and 'debited/credited'.");
+      alert("Could not understand that SMS.");
     }
   };
 
-  // --- EXPORT TO CSV FEATURE ---
+  // EXPORT CSV
   const downloadCSV = () => {
     const headers = ['Date', 'Title', 'Category', 'Type', 'Amount'];
     const csvRows = filteredTransactions.map(tx => {
-      const dateStr = tx.date; 
+      const dateStr = tx.date ? new Date(tx.date).toLocaleDateString() : ''; 
       return [
         `"${dateStr}"`,
         `"${tx.title}"`,
@@ -146,13 +198,12 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
     document.body.removeChild(a);
   };
 
-  // --- IMPORT CSV FEATURE ---
+  // IMPORT CSV
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    
     reader.onload = (e) => {
       const text = e.target.result;
       try {
@@ -163,11 +214,17 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
           const line = lines[i].trim();
           if (line) {
             const columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
-            
             if (columns.length >= 5) {
+               // Try to parse date
+               let dateVal = columns[0];
+               if(dateVal === 'Invalid Date' || !dateVal) dateVal = new Date().toISOString().split('T')[0];
+               else {
+                   // Ensure YYYY-MM-DD format if possible, or leave as is
+                   try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(e){}
+               }
+
               const tx = {
-                id: Date.now() + i, 
-                date: columns[0],   
+                date: dateVal,   
                 title: columns[1],  
                 category: columns[2], 
                 type: columns[3].toLowerCase(), 
@@ -182,17 +239,15 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
         }
         
         if (newTransactions.length > 0) {
-          onImport(newTransactions);
-          alert(`Successfully imported ${newTransactions.length} transactions!`);
+          saveImportedTransactions(newTransactions); // Send to Backend
         } else {
-          alert("No valid transactions found in the file.");
+          alert("No valid transactions found.");
         }
       } catch (error) {
         console.error("Error parsing CSV:", error);
-        alert("Error parsing file. Please ensure it is a valid CSV.");
+        alert("Error parsing file.");
       }
     };
-    
     reader.readAsText(file);
     event.target.value = ''; 
   };
@@ -215,7 +270,7 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -241,7 +296,7 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
             />
           </div>
           
-          {/* NEW: Smart SMS Button */}
+          {/* AI Scan Button */}
           <button 
             onClick={() => setShowSMSModal(true)}
             className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
@@ -261,7 +316,7 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
             onClick={() => fileInputRef.current.click()}
             className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
           >
-            <FaFileUpload className="mr-2" /> Import CSV
+            <FaFileUpload className="mr-2" /> Import
           </button>
 
           {/* Export Button */}
@@ -269,7 +324,7 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
             onClick={downloadCSV}
             className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
           >
-            <FaDownload className="mr-2" /> Export CSV
+            <FaDownload className="mr-2" /> Export
           </button>
         </div>
       </div>
@@ -448,7 +503,7 @@ const TransactionHistory = ({ transactions = [], onImport, onDelete }) => {
         </div>
       </div>
 
-      {/* --- NEW: SMS Parser Modal --- */}
+      {/* SMS Parser Modal */}
       {showSMSModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl w-96">

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TransactionForm from '../components/TransactionForm';
 
-const AddTransaction = ({ onAddTransaction, currentBalance }) => {
+// REMOVED: { onAddTransaction } from props, as we don't need it anymore.
+const AddTransaction = ({ currentBalance }) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -12,13 +13,15 @@ const AddTransaction = ({ onAddTransaction, currentBalance }) => {
     setError(null);
     
     try {
-      // Call the parent's onAddTransaction function to add the new transaction
-      await onAddTransaction(transaction);
-      // Navigate back to the dashboard after successful submission
+      // REMOVED: await onAddTransaction(transaction);
+      // REASON: Your TransactionForm already saved the data to the DB.
+      // We simply need to go back to the dashboard now.
+      
       navigate('/');
+      
     } catch (err) {
-      console.error('Error adding transaction:', err);
-      setError('Failed to add transaction. Please try again.');
+      console.error('Error in navigation:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

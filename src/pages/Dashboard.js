@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios'; // 🔌 Import Axios for backend calls
 import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit } from 'react-icons/fa';
 import SummaryCard from '../components/SummaryCard';
 import TransactionTable from '../components/TransactionTable';
 import TopCategoriesChart from '../components/TopCategoriesChart';
 
-const Dashboard = ({ transactions = [] }) => {
+const Dashboard = () => {
+  // 1. Data State
+  const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 2. UI/Filter State
   const [filterType, setFilterType] = useState('thisMonth'); // 'all', 'thisMonth', 'lastMonth'
-  const [budgetLimit, setBudgetLimit] = useState(20000); // Default monthly budget
+  
+  // 3. Budget State (With LocalStorage Persistence)
+  const [budgetLimit, setBudgetLimit] = useState(() => {
+    const saved = localStorage.getItem('monthlyBudget');
+    return saved ? JSON.parse(saved) : 20000;
+  });
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   
   const [summary, setSummary] = useState({
@@ -17,7 +27,37 @@ const Dashboard = ({ transactions = [] }) => {
   });
   const [topCategories, setTopCategories] = useState([]);
 
-  // --- Filter Logic (Fixed Warning) ---
+  // 🔌 FETCH DATA FROM BACKEND
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/transactions');
+        // Map backend data to fit the dashboard's expectations
+        const mappedData = res.data.map(item => ({
+          ...item,
+          id: item._id,     
+          title: item.text, 
+          amount: Math.abs(item.amount), // Ensure positive numbers for UI calculations
+          date: item.date
+        }));
+        setTransactions(mappedData);
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  // 💾 SAVE BUDGET CHANGES
+  const handleBudgetChange = (amount) => {
+    setBudgetLimit(amount);
+    localStorage.setItem('monthlyBudget', JSON.stringify(amount));
+  };
+
+  // --- Filter Logic ---
   const filteredData = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -39,54 +79,50 @@ const Dashboard = ({ transactions = [] }) => {
       }
       return true;
     });
-  }, [transactions, filterType]); // Dependencies are now correct
+  }, [transactions, filterType]);
 
   // --- Calculations ---
   useEffect(() => {
-    // Simulate API delay for realism
-    const timer = setTimeout(() => {
-      const income = filteredData
-        .filter(tx => tx.type === 'income')
-        .reduce((sum, tx) => sum + tx.amount, 0);
+    if (isLoading) return;
 
-      const expenses = filteredData
-        .filter(tx => tx.type === 'expense')
-        .reduce((sum, tx) => sum + tx.amount, 0);
+    // Calculate Totals
+    const income = filteredData
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + tx.amount, 0);
 
-      setSummary({
-        totalIncome: income,
-        totalExpenses: expenses,
-        balance: income - expenses,
+    const expenses = filteredData
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    setSummary({
+      totalIncome: income,
+      totalExpenses: expenses,
+      balance: income - expenses,
+    });
+
+    // Calculate Top Categories
+    const categoryMap = {};
+    filteredData
+      .filter(tx => tx.type === 'expense')
+      .forEach(tx => {
+        if (!categoryMap[tx.category]) categoryMap[tx.category] = 0;
+        categoryMap[tx.category] += tx.amount;
       });
 
-      // Calculate top categories for the filtered period
-      const categoryMap = {};
-      filteredData
-        .filter(tx => tx.type === 'expense')
-        .forEach(tx => {
-          if (!categoryMap[tx.category]) categoryMap[tx.category] = 0;
-          categoryMap[tx.category] += tx.amount;
-        });
+    const categories = Object.entries(categoryMap)
+      .map(([category, amount]) => ({
+        category,
+        amount: parseFloat(amount.toFixed(2)),
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
 
-      const categories = Object.entries(categoryMap)
-        .map(([category, amount]) => ({
-          category,
-          amount: parseFloat(amount.toFixed(2)),
-        }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
-
-      setTopCategories(categories);
-      setIsLoading(false);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [filteredData]);
+    setTopCategories(categories);
+  }, [filteredData, isLoading]);
 
   // --- Budget Progress Logic ---
   const budgetPercentage = Math.min((summary.totalExpenses / budgetLimit) * 100, 100);
   
-  // Determine color based on percentage
   const getProgressBarColor = () => {
     if (budgetPercentage < 50) return 'bg-green-500';
     if (budgetPercentage < 85) return 'bg-yellow-400';
@@ -138,7 +174,7 @@ const Dashboard = ({ transactions = [] }) => {
                      <input 
                        type="number" 
                        value={budgetLimit} 
-                       onChange={(e) => setBudgetLimit(Number(e.target.value))}
+                       onChange={(e) => handleBudgetChange(Number(e.target.value))}
                        onBlur={() => setIsEditingBudget(false)}
                        autoFocus
                        className="w-24 border-b-2 border-blue-500 focus:outline-none ml-1 text-gray-600"
@@ -208,6 +244,7 @@ const Dashboard = ({ transactions = [] }) => {
           <div className="card">
             <h2 className="text-lg font-medium mb-4">Recent Transactions</h2>
             <div className="overflow-x-auto">
+              {/* Table handles display; we slice here to show only top 5 */}
               <TransactionTable transactions={filteredData.slice(0, 5)} showCategory={true} />
             </div>
           </div>
