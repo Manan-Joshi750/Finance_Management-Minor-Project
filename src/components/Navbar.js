@@ -65,15 +65,15 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 animate-fade-in shadow-xl">
           <div className="px-2 pt-2 pb-4 space-y-1 sm:px-3">
-            <Link to="/" onClick={closeMobileMenu} className={`block px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/')}`}>
+            <Link to="/" onClick={closeMobileMenu} className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/')}`}>
               <FaChartPie className="mr-3" /> Dashboard
             </Link>
             
-            <Link to="/history" onClick={closeMobileMenu} className={`block px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/history')}`}>
+            <Link to="/history" onClick={closeMobileMenu} className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/history')}`}>
               <FaList className="mr-3" /> History
             </Link>
 
-            <Link to="/goals" onClick={closeMobileMenu} className={`block px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/goals')}`}>
+            <Link to="/goals" onClick={closeMobileMenu} className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/goals')}`}>
               <FaBullseye className="mr-3 text-red-500" /> Goals
             </Link>
             
