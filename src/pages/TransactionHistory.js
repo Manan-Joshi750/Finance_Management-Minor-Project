@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios'; // 🔌 Connect to Backend
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic } from 'react-icons/fa';
+import axios from 'axios';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic, FaChevronDown } from 'react-icons/fa';
 import { parseSMS } from '../utils/smsParser'; 
 
 const TransactionHistory = () => {
-  // We removed props because we now fetch our own data!
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +16,9 @@ const TransactionHistory = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   
+  // Export Dropdown State
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   // SMS Modal State
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [smsText, setSmsText] = useState('');
@@ -28,12 +30,10 @@ const TransactionHistory = () => {
     try {
       const res = await axios.get('http://localhost:5000/api/transactions');
       
-      // Map Backend fields (_id, text) to Frontend fields (id, title)
       const mappedData = res.data.map(item => ({
         ...item,
-        id: item._id,     // Backend uses _id
-        title: item.text, // Backend uses text
-        // Ensure amount is a number
+        id: item._id,     
+        title: item.text, 
         amount: Math.abs(item.amount) 
       }));
 
@@ -45,17 +45,14 @@ const TransactionHistory = () => {
     }
   };
 
-  // Initial Load
   useEffect(() => {
     fetchTransactions();
   }, []);
 
-  // Update filtered list when transactions change
   useEffect(() => {
     setFilteredTransactions(transactions);
   }, [transactions]);
 
-  // Apply filters and sorting (Kept your logic exactly as is)
   useEffect(() => {
     let result = [...transactions];
 
@@ -119,7 +116,6 @@ const TransactionHistory = () => {
     if (window.confirm("Are you sure you want to delete this transaction?")) {
       try {
         await axios.delete(`http://localhost:5000/api/transactions/${id}`);
-        // Remove from local state immediately for speed
         setTransactions(transactions.filter(tx => tx.id !== id));
       } catch (err) {
         console.error("Error deleting transaction:", err);
@@ -131,9 +127,7 @@ const TransactionHistory = () => {
   // 🔌 SAVE IMPORTED DATA TO BACKEND
   const saveImportedTransactions = async (newTransactions) => {
     try {
-      // We process them one by one or in parallel
       const promises = newTransactions.map(tx => {
-        // Convert to backend format
         const backendTx = {
             text: tx.title,
             amount: tx.type === 'expense' ? -Math.abs(tx.amount) : Math.abs(tx.amount),
@@ -146,21 +140,20 @@ const TransactionHistory = () => {
 
       await Promise.all(promises);
       alert(`Successfully saved ${newTransactions.length} transactions to database!`);
-      fetchTransactions(); // Refresh list
+      fetchTransactions(); 
     } catch (err) {
         console.error("Error saving imports:", err);
         alert("Error saving some transactions to the database.");
     }
   };
 
-  // SMS HANDLER
   const handleSMSParse = () => {
     const result = parseSMS(smsText);
     if (result && result.amount > 0) {
       const newTx = {
         id: Date.now(),
         ...result,
-        date: new Date().toISOString().split('T')[0] // Default to today
+        date: new Date().toISOString().split('T')[0]
       };
       
       if(window.confirm(`Parsed:\n${newTx.title}\nAmount: ${newTx.amount}\n\nAdd this?`)) {
@@ -169,7 +162,7 @@ const TransactionHistory = () => {
         setShowSMSModal(false);
       }
     } else {
-      alert("Could not understand that SMS.");
+      alert("Could not understand that text.");
     }
   };
 
@@ -198,54 +191,97 @@ const TransactionHistory = () => {
     document.body.removeChild(a);
   };
 
-  // IMPORT CSV
+  // EXPORT JSON
+  const downloadJSON = () => {
+    const exportData = filteredTransactions.map(tx => ({
+      Date: tx.date ? new Date(tx.date).toISOString().split('T')[0] : '',
+      Title: tx.title,
+      Category: tx.category,
+      Type: tx.type,
+      Amount: tx.amount
+    }));
+    
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'finance_report.json');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // MULTI-FORMAT IMPORT 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    const fileExtension = file.name.split('.').pop().toLowerCase();
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const text = e.target.result;
-      try {
-        const lines = text.split('\n');
-        const newTransactions = [];
-        
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (line) {
-            const columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
-            if (columns.length >= 5) {
-               // Try to parse date
-               let dateVal = columns[0];
-               if(dateVal === 'Invalid Date' || !dateVal) dateVal = new Date().toISOString().split('T')[0];
-               else {
-                   // Ensure YYYY-MM-DD format if possible, or leave as is
-                   try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(e){}
-               }
+      let newTransactions = [];
 
-              const tx = {
-                date: dateVal,   
-                title: columns[1],  
-                category: columns[2], 
-                type: columns[3].toLowerCase(), 
-                amount: parseFloat(columns[4]) 
-              };
-              
-              if (tx.title && !isNaN(tx.amount)) {
-                newTransactions.push(tx);
+      try {
+        if (fileExtension === 'csv') {
+          // Parse CSV
+          const lines = text.split('\n');
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+              const columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
+              if (columns.length >= 5) {
+                 let dateVal = columns[0];
+                 if(dateVal === 'Invalid Date' || !dateVal) dateVal = new Date().toISOString().split('T')[0];
+                 else {
+                     try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(err){}
+                 }
+                const tx = {
+                  date: dateVal,   
+                  title: columns[1],  
+                  category: columns[2], 
+                  type: columns[3].toLowerCase(), 
+                  amount: parseFloat(columns[4]) 
+                };
+                if (tx.title && !isNaN(tx.amount)) newTransactions.push(tx);
               }
             }
           }
-        }
-        
-        if (newTransactions.length > 0) {
-          saveImportedTransactions(newTransactions); // Send to Backend
+        } else if (fileExtension === 'json') {
+          // Parse JSON
+          const parsedData = JSON.parse(text);
+          const dataArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+          
+          newTransactions = dataArray.map(item => {
+            let dateVal = item.date || item.Date;
+            if(dateVal === 'Invalid Date' || !dateVal) dateVal = new Date().toISOString().split('T')[0];
+            else {
+                try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(err){}
+            }
+            return {
+              date: dateVal,
+              title: item.title || item.Title || item.description || item.Description,
+              category: item.category || item.Category,
+              type: (item.type || item.Type || 'expense').toLowerCase(),
+              amount: parseFloat(item.amount || item.Amount)
+            };
+          }).filter(tx => tx.title && !isNaN(tx.amount));
         } else {
-          alert("No valid transactions found.");
+          alert("Unsupported file format. Please upload a .csv or .json file.");
+          return;
+        }
+
+        if (newTransactions.length > 0) {
+          saveImportedTransactions(newTransactions); 
+        } else {
+          alert("No valid transactions found in the file.");
         }
       } catch (error) {
-        console.error("Error parsing CSV:", error);
-        alert("Error parsing file.");
+        console.error("Error parsing file:", error);
+        alert("Error parsing file. Please check the format.");
       }
     };
     reader.readAsText(file);
@@ -277,7 +313,6 @@ const TransactionHistory = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Area */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Transaction History</h1>
         
@@ -304,12 +339,12 @@ const TransactionHistory = () => {
             <FaMagic className="mr-2" /> AI Scan
           </button>
 
-          {/* Import Button */}
+          {/* Import Button (Single Button handling both CSV and JSON!) */}
           <input 
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileUpload} 
-            accept=".csv" 
+            accept=".csv, .json" 
             className="hidden" 
           />
           <button 
@@ -319,17 +354,39 @@ const TransactionHistory = () => {
             <FaFileUpload className="mr-2" /> Import
           </button>
 
-          {/* Export Button */}
-          <button 
-            onClick={downloadCSV}
-            className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
-          >
-            <FaDownload className="mr-2" /> Export
-          </button>
+          {/* Single Dropdown Export Button */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <FaDownload className="mr-2" /> Export <FaChevronDown className="ml-2 text-xs" />
+            </button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="py-1">
+                  <button
+                    onClick={() => { downloadCSV(); setShowExportMenu(false); }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export as CSV
+                  </button>
+                  <button
+                    onClick={() => { downloadJSON(); setShowExportMenu(false); }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Export as JSON
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters Area */}
       <div className="card p-4 mb-6">
         <h2 className="text-lg font-medium mb-4">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -508,14 +565,14 @@ const TransactionHistory = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl w-96">
             <h3 className="text-xl font-bold mb-4 flex items-center">
-              <FaMagic className="text-purple-600 mr-2" /> Parse Transaction
+              <FaMagic className="text-purple-600 mr-2" /> Parse Transaction Text
             </h3>
             <p className="text-sm text-gray-600 mb-3">
-              Paste a bank SMS below (e.g., "Rs 500 debited for Coffee at Starbucks").
+              Paste a bank SMS or text block from a PDF below.
             </p>
             <textarea 
               className="w-full border rounded p-2 h-32 mb-4"
-              placeholder="Paste SMS here..."
+              placeholder="Paste text here..."
               value={smsText}
               onChange={(e) => setSmsText(e.target.value)}
             />

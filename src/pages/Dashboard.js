@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios'; // 🔌 Import Axios for backend calls
-import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit } from 'react-icons/fa';
+import axios from 'axios';
+import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit, FaChartPie, FaCheck, FaTimes } from 'react-icons/fa';
 import SummaryCard from '../components/SummaryCard';
 import TransactionTable from '../components/TransactionTable';
 import TopCategoriesChart from '../components/TopCategoriesChart';
@@ -11,15 +11,16 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // 2. UI/Filter State
-  const [filterType, setFilterType] = useState('thisMonth'); // 'all', 'thisMonth', 'lastMonth'
+  const [filterType, setFilterType] = useState('thisMonth'); 
   
-  // 3. Budget State (With LocalStorage Persistence)
+  // 3. Budget State 
   const [budgetLimit, setBudgetLimit] = useState(() => {
     const saved = localStorage.getItem('monthlyBudget');
     return saved ? JSON.parse(saved) : 20000;
   });
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   
+  // 4. Summary & Top Categories
   const [summary, setSummary] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -27,17 +28,20 @@ const Dashboard = () => {
   });
   const [topCategories, setTopCategories] = useState([]);
 
+  // 5. NEW: Rollover State
+  const [showRolloverModal, setShowRolloverModal] = useState(false);
+  const [rolloverAmount, setRolloverAmount] = useState(0);
+
   // 🔌 FETCH DATA FROM BACKEND
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         const res = await axios.get('http://localhost:5000/api/transactions');
-        // Map backend data to fit the dashboard's expectations
         const mappedData = res.data.map(item => ({
           ...item,
           id: item._id,     
           title: item.text, 
-          amount: Math.abs(item.amount), // Ensure positive numbers for UI calculations
+          amount: Math.abs(item.amount), 
           date: item.date
         }));
         setTransactions(mappedData);
@@ -47,9 +51,74 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
-
     fetchTransactions();
   }, []);
+
+  // 🚀 NEW: MONTH ROLLOVER LOGIC
+  useEffect(() => {
+    if (isLoading || transactions.length === 0) return;
+
+    const checkRollover = () => {
+      const now = new Date();
+      const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`;
+      const lastSeenMonthKey = localStorage.getItem('lastSeenMonth');
+
+      // If they haven't logged in this month, and we have a previous record
+      if (lastSeenMonthKey && lastSeenMonthKey !== currentMonthKey) {
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+
+        // Find last month's transactions
+        const lastMonthTx = transactions.filter(tx => {
+          const d = new Date(tx.date);
+          return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+        });
+
+        const lmIncome = lastMonthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const lmExpense = lastMonthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        const lmBalance = lmIncome - lmExpense;
+
+        if (lmBalance > 0) {
+          setRolloverAmount(lmBalance);
+          setShowRolloverModal(true);
+        } else {
+          localStorage.setItem('lastSeenMonth', currentMonthKey);
+        }
+      } else if (!lastSeenMonthKey) {
+        // First time ever using the app
+        localStorage.setItem('lastSeenMonth', currentMonthKey);
+      }
+    };
+
+    checkRollover();
+  }, [isLoading, transactions]);
+
+  const handleAcceptRollover = async () => {
+    try {
+      const newTx = {
+        text: "Previous Month Rollover",
+        amount: rolloverAmount,
+        type: "income",
+        category: "Other", // Safe default
+      };
+      // Send to backend
+      const res = await axios.post('http://localhost:5000/api/transactions', newTx);
+      
+      // Update local state instantly
+      const mappedTx = { ...res.data, id: res.data._id, title: res.data.text, amount: Math.abs(res.data.amount), date: res.data.date };
+      setTransactions(prev => [...prev, mappedTx]);
+      
+      closeRolloverModal();
+    } catch (error) {
+      console.error("Error adding rollover:", error);
+    }
+  };
+
+  const closeRolloverModal = () => {
+    setShowRolloverModal(false);
+    const now = new Date();
+    localStorage.setItem('lastSeenMonth', `${now.getFullYear()}-${now.getMonth()}`);
+  };
 
   // 💾 SAVE BUDGET CHANGES
   const handleBudgetChange = (amount) => {
@@ -65,17 +134,11 @@ const Dashboard = () => {
 
     return transactions.filter(tx => {
       const txDate = new Date(tx.date);
-      
       if (filterType === 'all') return true;
-      
-      if (filterType === 'thisMonth') {
-        return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-      }
-      
+      if (filterType === 'thisMonth') return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
       if (filterType === 'lastMonth') {
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        return txDate.getMonth() === lastMonthDate.getMonth() && 
-               txDate.getFullYear() === lastMonthDate.getFullYear();
+        return txDate.getMonth() === lastMonthDate.getMonth() && txDate.getFullYear() === lastMonthDate.getFullYear();
       }
       return true;
     });
@@ -85,14 +148,8 @@ const Dashboard = () => {
   useEffect(() => {
     if (isLoading) return;
 
-    // Calculate Totals
-    const income = filteredData
-      .filter(tx => tx.type === 'income')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
-    const expenses = filteredData
-      .filter(tx => tx.type === 'expense')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+    const income = filteredData.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const expenses = filteredData.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
 
     setSummary({
       totalIncome: income,
@@ -100,14 +157,11 @@ const Dashboard = () => {
       balance: income - expenses,
     });
 
-    // Calculate Top Categories
     const categoryMap = {};
-    filteredData
-      .filter(tx => tx.type === 'expense')
-      .forEach(tx => {
-        if (!categoryMap[tx.category]) categoryMap[tx.category] = 0;
-        categoryMap[tx.category] += tx.amount;
-      });
+    filteredData.filter(tx => tx.type === 'expense').forEach(tx => {
+      if (!categoryMap[tx.category]) categoryMap[tx.category] = 0;
+      categoryMap[tx.category] += tx.amount;
+    });
 
     const categories = Object.entries(categoryMap)
       .map(([category, amount]) => ({
@@ -122,7 +176,6 @@ const Dashboard = () => {
 
   // --- Budget Progress Logic ---
   const budgetPercentage = Math.min((summary.totalExpenses / budgetLimit) * 100, 100);
-  
   const getProgressBarColor = () => {
     if (budgetPercentage < 50) return 'bg-green-500';
     if (budgetPercentage < 85) return 'bg-yellow-400';
@@ -138,12 +191,41 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      
+      {/* --- ROLLOVER MODAL --- */}
+      {showRolloverModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl text-center mx-4">
+            <div className="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaWallet size={30} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">New Month, New Goals!</h2>
+            <p className="text-gray-600 mb-6">
+              You saved <span className="font-bold text-green-600">Rs. {rolloverAmount.toLocaleString()}</span> last month. Do you want to carry this over as your starting balance for this month?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button 
+                onClick={closeRolloverModal}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center"
+              >
+                <FaTimes className="mr-2" /> No Thanks
+              </button>
+              <button 
+                onClick={handleAcceptRollover}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-lg shadow-blue-200"
+              >
+                <FaCheck className="mr-2" /> Add to Balance
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         
-        {/* Time Filter Dropdown */}
         <div className="flex items-center bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm">
           <FaFilter className="text-gray-400 mr-2" />
           <select 
@@ -198,7 +280,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Progress Bar Container */}
           <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
             <div 
               className={`h-full transition-all duration-500 ease-out ${getProgressBarColor()}`} 
@@ -238,13 +319,41 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* 🚀 NEW: 50-30-20 RULE SPLITTER SECTION */}
+      {summary.totalIncome > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center mb-4 text-gray-800">
+            <FaChartPie className="text-blue-500 mr-2" size={20} />
+            <h2 className="text-lg font-bold">50-30-20 Ideal Budget Rule</h2>
+          </div>
+          <p className="text-sm text-gray-500 mb-6">Based on your income of Rs. {summary.totalIncome.toLocaleString()}, here is how your budget should ideally be split.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <h3 className="text-indigo-800 font-bold mb-1">Needs (50%)</h3>
+              <p className="text-xs text-indigo-600 mb-2">Rent, Groceries, Utilities</p>
+              <p className="text-xl font-bold text-indigo-900">Rs. {(summary.totalIncome * 0.50).toLocaleString()}</p>
+            </div>
+            <div className="p-4 bg-pink-50 border border-pink-100 rounded-lg">
+              <h3 className="text-pink-800 font-bold mb-1">Wants (30%)</h3>
+              <p className="text-xs text-pink-600 mb-2">Dining, Entertainment, Shopping</p>
+              <p className="text-xl font-bold text-pink-900">Rs. {(summary.totalIncome * 0.30).toLocaleString()}</p>
+            </div>
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
+              <h3 className="text-emerald-800 font-bold mb-1">Savings (20%)</h3>
+              <p className="text-xs text-emerald-600 mb-2">Investments, Emergency Fund</p>
+              <p className="text-xl font-bold text-emerald-900">Rs. {(summary.totalIncome * 0.20).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Charts and Recent Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <div className="card">
             <h2 className="text-lg font-medium mb-4">Recent Transactions</h2>
             <div className="overflow-x-auto">
-              {/* Table handles display; we slice here to show only top 5 */}
               <TransactionTable transactions={filteredData.slice(0, 5)} showCategory={true} />
             </div>
           </div>
