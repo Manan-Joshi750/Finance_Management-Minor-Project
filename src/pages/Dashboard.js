@@ -5,34 +5,45 @@ import SummaryCard from '../components/SummaryCard';
 import TransactionTable from '../components/TransactionTable';
 import TopCategoriesChart from '../components/TopCategoriesChart';
 
+// 🧠 THE BRAIN: Perfectly mapped to your TransactionForm.js categories!
+const CATEGORY_MAPPING = {
+  // NEEDS (50%)
+  'Food': 'Needs',
+  'Housing': 'Needs',
+  'Utilities': 'Needs',
+  'Healthcare': 'Needs',
+  'Transport': 'Needs',
+  'Education': 'Needs',
+  
+  // WANTS (30%)
+  'Shopping': 'Wants',
+  'Entertainment': 'Wants',
+  
+  // SAVINGS/INVESTMENTS (20%)
+  'Savings': 'Savings',
+  'Investment': 'Savings',
+  
+  // 'Other' and 'Salary' will default to 'Wants' in our fallback logic if they are marked as an expense.
+};
+
 const Dashboard = () => {
-  // 1. Data State
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 2. UI/Filter State
   const [filterType, setFilterType] = useState('thisMonth'); 
-  
-  // 3. Budget State 
   const [budgetLimit, setBudgetLimit] = useState(() => {
     const saved = localStorage.getItem('monthlyBudget');
     return saved ? JSON.parse(saved) : 20000;
   });
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-  
-  // 4. Summary & Top Categories
   const [summary, setSummary] = useState({
     totalIncome: 0,
     totalExpenses: 0,
     balance: 0,
   });
   const [topCategories, setTopCategories] = useState([]);
-
-  // 5. NEW: Rollover State
   const [showRolloverModal, setShowRolloverModal] = useState(false);
   const [rolloverAmount, setRolloverAmount] = useState(0);
 
-  // 🔌 FETCH DATA FROM BACKEND
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
@@ -54,7 +65,6 @@ const Dashboard = () => {
     fetchTransactions();
   }, []);
 
-  // 🚀 NEW: MONTH ROLLOVER LOGIC
   useEffect(() => {
     if (isLoading || transactions.length === 0) return;
 
@@ -63,12 +73,10 @@ const Dashboard = () => {
       const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`;
       const lastSeenMonthKey = localStorage.getItem('lastSeenMonth');
 
-      // If they haven't logged in this month, and we have a previous record
       if (lastSeenMonthKey && lastSeenMonthKey !== currentMonthKey) {
         const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
         const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-        // Find last month's transactions
         const lastMonthTx = transactions.filter(tx => {
           const d = new Date(tx.date);
           return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
@@ -85,7 +93,6 @@ const Dashboard = () => {
           localStorage.setItem('lastSeenMonth', currentMonthKey);
         }
       } else if (!lastSeenMonthKey) {
-        // First time ever using the app
         localStorage.setItem('lastSeenMonth', currentMonthKey);
       }
     };
@@ -99,15 +106,11 @@ const Dashboard = () => {
         text: "Previous Month Rollover",
         amount: rolloverAmount,
         type: "income",
-        category: "Other", // Safe default
+        category: "Other",
       };
-      // Send to backend
       const res = await axios.post('http://localhost:5000/api/transactions', newTx);
-      
-      // Update local state instantly
       const mappedTx = { ...res.data, id: res.data._id, title: res.data.text, amount: Math.abs(res.data.amount), date: res.data.date };
       setTransactions(prev => [...prev, mappedTx]);
-      
       closeRolloverModal();
     } catch (error) {
       console.error("Error adding rollover:", error);
@@ -120,13 +123,11 @@ const Dashboard = () => {
     localStorage.setItem('lastSeenMonth', `${now.getFullYear()}-${now.getMonth()}`);
   };
 
-  // 💾 SAVE BUDGET CHANGES
   const handleBudgetChange = (amount) => {
     setBudgetLimit(amount);
     localStorage.setItem('monthlyBudget', JSON.stringify(amount));
   };
 
-  // --- Filter Logic ---
   const filteredData = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -144,7 +145,6 @@ const Dashboard = () => {
     });
   }, [transactions, filterType]);
 
-  // --- Calculations ---
   useEffect(() => {
     if (isLoading) return;
 
@@ -174,13 +174,25 @@ const Dashboard = () => {
     setTopCategories(categories);
   }, [filteredData, isLoading]);
 
-  // --- Budget Progress Logic ---
   const budgetPercentage = Math.min((summary.totalExpenses / budgetLimit) * 100, 100);
   const getProgressBarColor = () => {
     if (budgetPercentage < 50) return 'bg-green-500';
     if (budgetPercentage < 85) return 'bg-yellow-400';
     return 'bg-red-500';
   };
+
+  // 📊 Calculate Actual 50-30-20 Split
+  const actualSplit = useMemo(() => {
+    const split = { Needs: 0, Wants: 0, Savings: 0 };
+    
+    // We only categorize expenses for this rule
+    filteredData.filter(tx => tx.type === 'expense').forEach(tx => {
+      const bucket = CATEGORY_MAPPING[tx.category] || 'Wants'; // Default unmapped to Wants
+      split[bucket] += tx.amount;
+    });
+    
+    return split;
+  }, [filteredData]);
 
   if (isLoading) {
     return (
@@ -193,7 +205,6 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 relative">
       
-      {/* --- ROLLOVER MODAL --- */}
       {showRolloverModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl text-center mx-4">
@@ -222,7 +233,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         
@@ -240,7 +250,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* --- BUDGET TRACKER SECTION --- */}
       {filterType !== 'all' && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex justify-between items-end mb-4">
@@ -294,7 +303,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <SummaryCard 
           title="Total Income" 
@@ -319,36 +327,93 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* 🚀 NEW: 50-30-20 RULE SPLITTER SECTION */}
+      {/* 🚀 UPGRADED: Actual vs Ideal 50-30-20 Rule Splitter */}
       {summary.totalIncome > 0 && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center mb-4 text-gray-800">
             <FaChartPie className="text-blue-500 mr-2" size={20} />
-            <h2 className="text-lg font-bold">50-30-20 Ideal Budget Rule</h2>
+            <h2 className="text-lg font-bold">50-30-20 Tracker (Ideal vs Actual)</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-6">Based on your income of Rs. {summary.totalIncome.toLocaleString()}, here is how your budget should ideally be split.</p>
+          <p className="text-sm text-gray-500 mb-6">Track your real spending habits against the golden 50/30/20 rule.</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
-              <h3 className="text-indigo-800 font-bold mb-1">Needs (50%)</h3>
-              <p className="text-xs text-indigo-600 mb-2">Rent, Groceries, Utilities</p>
-              <p className="text-xl font-bold text-indigo-900">Rs. {(summary.totalIncome * 0.50).toLocaleString()}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* NEEDS CARD */}
+            <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-indigo-800 font-bold mb-1">Needs (50%)</h3>
+                <p className="text-xs text-indigo-600 mb-4">Housing, Food, Transport, etc.</p>
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <p className="text-xs text-indigo-400 uppercase font-bold tracking-wider">Actual</p>
+                    <p className="text-xl font-bold text-indigo-900">Rs. {actualSplit.Needs.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-indigo-400 uppercase font-bold tracking-wider">Target</p>
+                    <p className="text-sm font-bold text-indigo-700">Rs. {(summary.totalIncome * 0.50).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full bg-indigo-200 rounded-full h-2 mt-2">
+                <div 
+                  className={`h-full rounded-full ${actualSplit.Needs > (summary.totalIncome * 0.50) ? 'bg-red-500' : 'bg-indigo-600'}`} 
+                  style={{ width: `${Math.min((actualSplit.Needs / (summary.totalIncome * 0.50)) * 100, 100) || 0}%` }}
+                ></div>
+              </div>
             </div>
-            <div className="p-4 bg-pink-50 border border-pink-100 rounded-lg">
-              <h3 className="text-pink-800 font-bold mb-1">Wants (30%)</h3>
-              <p className="text-xs text-pink-600 mb-2">Dining, Entertainment, Shopping</p>
-              <p className="text-xl font-bold text-pink-900">Rs. {(summary.totalIncome * 0.30).toLocaleString()}</p>
+
+            {/* WANTS CARD */}
+            <div className="p-5 bg-pink-50 border border-pink-100 rounded-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-pink-800 font-bold mb-1">Wants (30%)</h3>
+                <p className="text-xs text-pink-600 mb-4">Shopping, Entertainment, etc.</p>
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <p className="text-xs text-pink-400 uppercase font-bold tracking-wider">Actual</p>
+                    <p className="text-xl font-bold text-pink-900">Rs. {actualSplit.Wants.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-pink-400 uppercase font-bold tracking-wider">Target</p>
+                    <p className="text-sm font-bold text-pink-700">Rs. {(summary.totalIncome * 0.30).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full bg-pink-200 rounded-full h-2 mt-2">
+                <div 
+                  className={`h-full rounded-full ${actualSplit.Wants > (summary.totalIncome * 0.30) ? 'bg-red-500' : 'bg-pink-500'}`} 
+                  style={{ width: `${Math.min((actualSplit.Wants / (summary.totalIncome * 0.30)) * 100, 100) || 0}%` }}
+                ></div>
+              </div>
             </div>
-            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
-              <h3 className="text-emerald-800 font-bold mb-1">Savings (20%)</h3>
-              <p className="text-xs text-emerald-600 mb-2">Investments, Emergency Fund</p>
-              <p className="text-xl font-bold text-emerald-900">Rs. {(summary.totalIncome * 0.20).toLocaleString()}</p>
+
+            {/* SAVINGS CARD */}
+            <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-emerald-800 font-bold mb-1">Savings (20%)</h3>
+                <p className="text-xs text-emerald-600 mb-4">Investments & Saved Income</p>
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <p className="text-xs text-emerald-400 uppercase font-bold tracking-wider">Actual</p>
+                    <p className="text-xl font-bold text-emerald-900">Rs. {actualSplit.Savings.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-emerald-400 uppercase font-bold tracking-wider">Target</p>
+                    <p className="text-sm font-bold text-emerald-700">Rs. {(summary.totalIncome * 0.20).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full bg-emerald-200 rounded-full h-2 mt-2">
+                <div 
+                  className={`h-full rounded-full bg-emerald-500`} 
+                  style={{ width: `${Math.min((actualSplit.Savings / (summary.totalIncome * 0.20)) * 100, 100) || 0}%` }}
+                ></div>
+              </div>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* Charts and Recent Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <div className="card">

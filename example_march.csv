@@ -1,0 +1,61 @@
+Date,Title,Category,Type,Amount
+2026-03-01,TechCorp Monthly Salary,Salary,income,55000
+2026-03-01,Rent Payment,Housing,expense,12000
+2026-03-02,Internet & WiFi Bill,Utilities,expense,999
+2026-03-02,Morning Coffee,Food,expense,250
+2026-03-03,Supermarket Groceries,Food,expense,3800
+2026-03-03,Uber to Office,Transport,expense,350
+2026-03-04,Netflix Subscription,Entertainment,expense,649
+2026-03-05,Electricity Bill,Utilities,expense,1450
+2026-03-05,Gym Membership,Health,expense,1500
+2026-03-06,Lunch with Colleagues,Food,expense,850
+2026-03-07,Weekend Movie Tickets,Entertainment,expense,900
+2026-03-07,Popcorn and Snacks,Food,expense,400
+2026-03-08,Freelance Web Design,Other,income,15000
+2026-03-08,Uber to Mall,Transport,expense,400
+2026-03-09,New Running Shoes,Shopping,expense,4500
+2026-03-09,Protein Powder,Health,expense,2200
+2026-03-10,Mutual Fund SIP,Investment,expense,5000
+2026-03-10,Fixed Deposit Transfer,Savings,expense,3000
+2026-03-11,Spotify Premium,Entertainment,expense,119
+2026-03-12,Pharmacy & Meds,Health,expense,850
+2026-03-12,Office Cab,Transport,expense,300
+2026-03-13,Friday Night Dinner,Food,expense,1800
+2026-03-14,Udemy React Course,Education,expense,499
+2026-03-14,Weekend Groceries,Food,expense,2100
+2026-03-15,Dividend Income,Investment,income,1250
+2026-03-15,Water Bill,Utilities,expense,350
+2026-03-16,Car Fuel,Transport,expense,2500
+2026-03-16,Coffee Shop Meeting,Food,expense,450
+2026-03-17,Amazon Prime Renewal,Entertainment,expense,1499
+2026-03-18,House Cleaning Service,Housing,expense,800
+2026-03-18,Stock Market Investment,Investment,expense,4000
+2026-03-19,Doctor Consultation,Health,expense,1000
+2026-03-19,Blood Test,Health,expense,600
+2026-03-20,Mid-month Bonus,Salary,income,10000
+2026-03-20,Team Lunch,Food,expense,1200
+2026-03-21,New Jeans,Shopping,expense,2200
+2026-03-21,T-Shirts,Shopping,expense,1500
+2026-03-22,Flight Tickets (Upcoming trip),Travel,expense,6500
+2026-03-22,Hotel Booking Advance,Housing,expense,3000
+2026-03-23,Uber Airport Drop,Transport,expense,800
+2026-03-23,Airport Coffee,Food,expense,350
+2026-03-24,Emergency Fund Add,Savings,expense,5000
+2026-03-24,Mobile Postpaid Bill,Utilities,expense,750
+2026-03-25,Sold Old Phone,Other,income,8000
+2026-03-25,Bought Phone Case,Shopping,expense,499
+2026-03-26,Office Cafeteria,Food,expense,200
+2026-03-26,Car Wash,Transport,expense,300
+2026-03-27,Books and Stationery,Education,expense,850
+2026-03-27,Dinner Delivery,Food,expense,650
+2026-03-28,Weekend Concert Ticket,Entertainment,expense,2500
+2026-03-28,Concert Drinks,Food,expense,800
+2026-03-29,Sunday Supermarket Trip,Food,expense,1900
+2026-03-29,Gold ETF Investment,Investment,expense,2500
+2026-03-30,Gas Cylinder Refill,Housing,expense,950
+2026-03-30,Metro Card Recharge,Transport,expense,1000
+2026-03-31,Cashback Received,Other,income,450
+2026-03-31,Haircut & Grooming,Personal,expense,600
+2026-03-31,Charity Donation,Other,expense,1000
+2026-03-31,Savings Account Interest,Investment,income,320
+2026-03-31,End of Month Pizza,Food,expense,750

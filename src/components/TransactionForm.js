@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios'; // 🔌 1. Import Axios
+import axios from 'axios';
 
 const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => {
   const [formData, setFormData] = useState({
@@ -10,9 +10,10 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     date: initialData.date || new Date().toISOString().split('T')[0],
   });
 
+  // 🚀 UPDATED: Added 'Savings' and 'Investment' to the dropdown list!
   const categories = [
     'Food', 'Shopping', 'Transport', 'Housing', 'Entertainment', 
-    'Utilities', 'Healthcare', 'Education', 'Salary', 'Other'
+    'Utilities', 'Healthcare', 'Education', 'Savings', 'Investment', 'Salary', 'Other'
   ];
 
   const handleChange = (e) => {
@@ -23,12 +24,9 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     }));
   };
 
-  const handleSubmit = async (e) => { // 🔌 2. Make this async
+  const handleSubmit = async (e) => { 
     e.preventDefault();
 
-    // 🔌 3. Prepare data for MongoDB
-    // We map 'title' -> 'text' because your Database expects 'text'
-    // We also make expenses negative so calculations are easier later
     const transactionData = {
       text: formData.title, 
       amount: formData.type === 'expense' ? -Math.abs(formData.amount) : Math.abs(formData.amount),
@@ -38,17 +36,14 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     };
 
     try {
-      // 🚀 4. SEND TO CLOUD
       const res = await axios.post('http://localhost:5000/api/transactions', transactionData);
       
       console.log('✅ Saved to Cloud:', res.data);
 
-      // Notify the parent component to update the list immediately
       if (onSubmit) {
         onSubmit(res.data);
       }
       
-      // Reset form
       if (!initialData.id) {
         setFormData({
           title: '',
@@ -65,7 +60,6 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     }
   };
 
-  // --- Calculation Logic for Smart Checker (Kept exactly as you had it) ---
   const transactionAmount = parseFloat(formData.amount) || 0;
   let projectedBalance = currentBalance;
   let isAffordable = true;
@@ -76,7 +70,6 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
   } else {
     projectedBalance = currentBalance + transactionAmount;
   }
-  // ---------------------------------------------------------------------
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -112,7 +105,6 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
             </div>
         )}
       </div>
-      {/* ---------------------------- */}
 
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">
