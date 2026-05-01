@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TransactionForm from '../components/TransactionForm';
 
-// REMOVED: { onAddTransaction } from props, as we don't need it anymore.
-const AddTransaction = ({ currentBalance }) => {
+// 👇 Added `onTransactionAdded` back in so we can refresh the Dashboard!
+const AddTransaction = ({ currentBalance, onTransactionAdded }) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -13,10 +13,13 @@ const AddTransaction = ({ currentBalance }) => {
     setError(null);
     
     try {
-      // REMOVED: await onAddTransaction(transaction);
-      // REASON: Your TransactionForm already saved the data to the DB.
-      // We simply need to go back to the dashboard now.
+      // TransactionForm already saved the data to the DB using the JWT token.
+      // Now we just tell App.js to fetch the fresh data from the server!
+      if (onTransactionAdded) {
+        await onTransactionAdded(); 
+      }
       
+      // Send them back to the Dashboard
       navigate('/');
       
     } catch (err) {

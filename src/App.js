@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './components/Navbar';
 
-// Pages
+// Auth Pages (New!)
+import Login from './components/Login';
+import Register from './components/Register';
+
+// Main Pages
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionHistory from './pages/TransactionHistory';
@@ -13,16 +17,37 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔌 FETCH DATA from Backend (Source of Truth)
-  const fetchTransactions = async () => {
+  // 🛡️ THE BOUNCER: Protects routes from unauthenticated users
+  const ProtectedRoute = ({ children }) => {
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
+
+  // 🔌 FETCH DATA from Backend (Now Secured with JWT!)
+  const fetchTransactions = useCallback(async () => {
+    const token = localStorage.getItem('userToken');
+    
+    // If no token, don't try to fetch data yet
+    if (!token) {
+      setLoading(false);
+      return; 
+    }
+
     try {
-      const res = await axios.get('http://localhost:5000/api/transactions');
+      const res = await axios.get('http://localhost:5000/api/transactions', {
+        headers: {
+          Authorization: `Bearer ${token}` // 👈 Flashing the digital keycard to the backend
+        }
+      });
       
       // Transform data to match what Dashboard expects
       const formattedData = res.data.map(item => ({
         ...item,
-        id: item._id,     // Dashboard might use 'id'
-        title: item.text, // Dashboard might use 'title'
+        id: item._id,     
+        title: item.text, 
         amount: Math.abs(item.amount) 
       }));
 
@@ -30,14 +55,20 @@ function App() {
       setLoading(false);
     } catch (err) {
       console.error("Error loading data:", err);
+      // If the token is invalid or expired, log them out
+      if (err.response && err.response.status === 401) {
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userName');
+        window.location.href = '/login';
+      }
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Load data when App starts
+  // Load data when App starts (or when fetchTransactions changes)
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [fetchTransactions]);
 
   // Recalculate Balance
   const calculateCurrentBalance = () => {
@@ -48,41 +79,63 @@ function App() {
     }, 0);
   };
 
+  // Check token to decide whether to show Navbar
+  const isAuthenticated = !!localStorage.getItem('userToken');
+
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
+        {/* Only show Navbar if the user is logged in */}
+        {isAuthenticated && <Navbar />}
+        
         <main className="container mx-auto px-4 py-8">
           <Routes>
-            {/* Dashboard: Receives Database Data */}
+            {/* 🔓 Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* 🔒 Protected Routes (Wrapped in Bouncer) */}
             <Route 
               path="/" 
-              element={loading ? <p>Loading...</p> : <Dashboard transactions={transactions} />} 
-            />
-            
-            {/* Add Transaction: Refreshes data after adding */}
-            <Route 
-              path="/add" 
               element={
-                <AddTransaction 
-                  onTransactionAdded={fetchTransactions} // Pass refresh function
-                  currentBalance={calculateCurrentBalance()} 
-                />
+                <ProtectedRoute>
+                  {loading ? <p>Loading...</p> : <Dashboard transactions={transactions} />}
+                </ProtectedRoute>
               } 
             />
             
-            {/* History: Manages its own data (Self-Contained) */}
+            <Route 
+              path="/add" 
+              element={
+                <ProtectedRoute>
+                  <AddTransaction 
+                    onTransactionAdded={fetchTransactions} 
+                    currentBalance={calculateCurrentBalance()} 
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route 
               path="/history" 
-              element={<TransactionHistory />} 
+              element={
+                <ProtectedRoute>
+                  {/* Note: In Phase 2, we will need to update axios inside this file too! */}
+                  <TransactionHistory />
+                </ProtectedRoute>
+              } 
             />
 
-            {/* Goals */}
             <Route 
               path="/goals" 
-              element={<FinancialGoals transactions={transactions} />} 
+              element={
+                <ProtectedRoute>
+                  <FinancialGoals transactions={transactions} />
+                </ProtectedRoute>
+              } 
             />
 
+            {/* Catch-all: If route doesn't exist, send to Dashboard (which will redirect to login if needed) */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

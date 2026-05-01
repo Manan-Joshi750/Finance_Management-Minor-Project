@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { FaWallet, FaChartPie, FaList, FaPlus, FaBullseye, FaBars, FaTimes } from 'react-icons/fa';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaWallet, FaChartPie, FaList, FaPlus, FaBullseye, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // <-- NEW: Allows us to trigger redirects
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Helper to check if a link is active
   const isActive = (path) => {
     return location.pathname === path 
-      ? "bg-blue-100 text-blue-800 font-bold"  // <--- CHANGED: Light bg, Dark text
+      ? "bg-blue-100 text-blue-800 font-bold"  
       : "text-gray-600 hover:bg-gray-100 hover:text-blue-600";
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // 🚪 NEW: The Logout Logic
+  const handleLogout = () => {
+    // 1. Shred the VIP pass
+    localStorage.removeItem('userToken');
+    
+    // 2. Optional: Clear out other user-specific data so a new user starts fresh
+    // localStorage.removeItem('monthlyBudget'); 
+    // localStorage.removeItem('lastSeenMonth');
+    
+    // 3. Kick the user back to the login page
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -38,7 +52,6 @@ const Navbar = () => {
               <FaList className="mr-2" /> History
             </Link>
 
-            {/* NEW: Goals Link */}
             <Link to="/goals" className={`px-4 py-2 rounded-md text-sm transition-all duration-200 flex items-center ${isActive('/goals')}`}>
               <FaBullseye className="mr-2 text-red-500" /> Goals
             </Link>
@@ -47,6 +60,14 @@ const Navbar = () => {
             <Link to="/add" className="ml-4 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all duration-200 flex items-center transform hover:scale-105">
               <FaPlus className="mr-2" /> Add New
             </Link>
+
+            {/* 🚪 NEW: Logout Button (Desktop) */}
+            <button 
+              onClick={handleLogout} 
+              className="ml-2 px-4 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 flex items-center border border-transparent hover:border-red-200"
+            >
+              <FaSignOutAlt className="mr-2" /> Logout
+            </button>
           </div>
 
           {/* Mobile Menu Button (Hamburger) */}
@@ -80,6 +101,17 @@ const Navbar = () => {
             <Link to="/add" onClick={closeMobileMenu} className="mt-4 block w-full text-center px-4 py-3 rounded-md text-base font-bold bg-blue-600 text-white shadow-md">
               <FaPlus className="inline mr-2" /> Add Transaction
             </Link>
+
+            {/* 🚪 NEW: Logout Button (Mobile) */}
+            <button 
+              onClick={() => {
+                handleLogout();
+                closeMobileMenu();
+              }} 
+              className="mt-2 block w-full text-center px-4 py-3 rounded-md text-base font-bold text-red-600 bg-red-50 border border-red-100 shadow-sm"
+            >
+              <FaSignOutAlt className="inline mr-2" /> Logout
+            </button>
           </div>
         </div>
       )}

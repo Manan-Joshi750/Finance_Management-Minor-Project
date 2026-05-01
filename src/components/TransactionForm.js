@@ -10,7 +10,7 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     date: initialData.date || new Date().toISOString().split('T')[0],
   });
 
-  // 🚀 UPDATED: Added 'Savings' and 'Investment' to the dropdown list!
+  // 🚀 Added 'Savings' and 'Investment' to the dropdown list!
   const categories = [
     'Food', 'Shopping', 'Transport', 'Housing', 'Entertainment', 
     'Utilities', 'Healthcare', 'Education', 'Savings', 'Investment', 'Salary', 'Other'
@@ -36,7 +36,14 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     };
 
     try {
-      const res = await axios.post('http://localhost:5000/api/transactions', transactionData);
+      // 🔐 THE FIX: Grab the keycard and attach it to the request header
+      const token = localStorage.getItem('userToken');
+      
+      const res = await axios.post('http://localhost:5000/api/transactions', transactionData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
       console.log('✅ Saved to Cloud:', res.data);
 
@@ -56,7 +63,12 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
 
     } catch (err) {
       console.error('❌ Error saving transaction:', err);
-      alert('Failed to save. Is the Backend running?');
+      // Give a more helpful error message if it's an auth issue
+      if (err.response && err.response.status === 401) {
+        alert('Session expired. Please log in again.');
+      } else {
+        alert('Failed to save. Is the Backend running?');
+      }
     }
   };
 

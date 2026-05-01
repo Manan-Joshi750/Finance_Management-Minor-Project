@@ -3,6 +3,23 @@ import axios from 'axios';
 import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic, FaChevronDown } from 'react-icons/fa';
 import { parseSMS } from '../utils/smsParser'; 
 
+// 🧠 SMART CATEGORY TAGGER
+const autoTagCategory = (description) => {
+  if (!description) return 'Other';
+  const text = description.toLowerCase();
+
+  if (text.match(/zomato|swiggy|kfc|mcdonalds|starbucks|grocery|supermarket|cafe|bakery|dairy|blinkit|zepto|instamart/)) return 'Food';
+  if (text.match(/uber|ola|rapido|petrol|fuel|ticket|train|flight|irctc|metro|makemytrip|redbus/)) return 'Transport';
+  if (text.match(/amazon|flipkart|myntra|clothes|zara|mall|shopping/)) return 'Shopping';
+  if (text.match(/netflix|spotify|movie|pvr|cinema|steam|playstation|bookmyshow/)) return 'Entertainment';
+  if (text.match(/electricity|water|wifi|jio|airtel|vi|recharge|bill|broadband|bescom|mseb/)) return 'Utilities';
+  if (text.match(/hospital|pharmacy|clinic|apollo|medicine|doctor|medplus|pharmeasy/)) return 'Healthcare';
+  if (text.match(/salary|freelance|client|payroll|interest|dividend/)) return 'Salary';
+  if (text.match(/mutual fund|zerodha|groww|upstox|stock|sip/)) return 'Investment';
+
+  return 'Other'; 
+};
+
 const TransactionHistory = () => {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
@@ -25,10 +42,13 @@ const TransactionHistory = () => {
   
   const fileInputRef = useRef(null);
 
-  // 🔌 FETCH DATA FROM BACKEND
+  // 🔌 FETCH DATA FROM BACKEND (Secured)
   const fetchTransactions = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/transactions');
+      const token = localStorage.getItem('userToken');
+      const res = await axios.get('http://localhost:5000/api/transactions', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       const mappedData = res.data.map(item => ({
         ...item,
@@ -111,11 +131,14 @@ const TransactionHistory = () => {
     }));
   };
 
-  // 🔌 DELETE FROM BACKEND
+  // 🔌 DELETE FROM BACKEND (Secured)
   const handleDeleteClick = async (id) => {
     if (window.confirm("Are you sure you want to delete this transaction?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/transactions/${id}`);
+        const token = localStorage.getItem('userToken');
+        await axios.delete(`http://localhost:5000/api/transactions/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setTransactions(transactions.filter(tx => tx.id !== id));
       } catch (err) {
         console.error("Error deleting transaction:", err);
@@ -124,9 +147,10 @@ const TransactionHistory = () => {
     }
   };
 
-  // 🔌 SAVE IMPORTED DATA TO BACKEND
+  // 🔌 SAVE IMPORTED DATA TO BACKEND (Secured)
   const saveImportedTransactions = async (newTransactions) => {
     try {
+      const token = localStorage.getItem('userToken');
       const promises = newTransactions.map(tx => {
         const backendTx = {
             text: tx.title,
@@ -135,7 +159,9 @@ const TransactionHistory = () => {
             type: tx.type,
             date: tx.date
         };
-        return axios.post('http://localhost:5000/api/transactions', backendTx);
+        return axios.post('http://localhost:5000/api/transactions', backendTx, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       });
 
       await Promise.all(promises);
@@ -213,7 +239,7 @@ const TransactionHistory = () => {
     document.body.removeChild(a);
   };
 
-  // MULTI-FORMAT IMPORT 
+  // 🚀 MULTI-FORMAT IMPORT WITH SMART AUTO-TAGGING
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -239,10 +265,19 @@ const TransactionHistory = () => {
                  else {
                      try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(err){}
                  }
+                 
+                 const titleVal = columns[1];
+                 let categoryVal = columns[2];
+                 
+                 // 🧠 If category is missing or 'other', let the AI guess it based on the title!
+                 if (!categoryVal || categoryVal.trim() === '' || categoryVal.toLowerCase() === 'other') {
+                    categoryVal = autoTagCategory(titleVal);
+                 }
+
                 const tx = {
                   date: dateVal,   
-                  title: columns[1],  
-                  category: columns[2], 
+                  title: titleVal,  
+                  category: categoryVal, 
                   type: columns[3].toLowerCase(), 
                   amount: parseFloat(columns[4]) 
                 };
@@ -261,10 +296,19 @@ const TransactionHistory = () => {
             else {
                 try { dateVal = new Date(dateVal).toISOString().split('T')[0]; } catch(err){}
             }
+            
+            const titleVal = item.title || item.Title || item.description || item.Description;
+            let categoryVal = item.category || item.Category;
+
+            // 🧠 If JSON is missing the category, let the AI guess it!
+            if (!categoryVal) {
+                categoryVal = autoTagCategory(titleVal);
+            }
+
             return {
               date: dateVal,
-              title: item.title || item.Title || item.description || item.Description,
-              category: item.category || item.Category,
+              title: titleVal,
+              category: categoryVal,
               type: (item.type || item.Type || 'expense').toLowerCase(),
               amount: parseFloat(item.amount || item.Amount)
             };

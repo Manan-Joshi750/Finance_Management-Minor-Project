@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
-// This is the Blueprint for every transaction we save
 const TransactionSchema = new mongoose.Schema({
+  // 👇 THE NEW UPGRADE: Tying this transaction to a specific User
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User' // This links directly to the User.js model we just created
+  },
   text: {
     type: String,
     required: [true, 'Please add some text']
@@ -12,12 +17,12 @@ const TransactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['income', 'expense'], // It can ONLY be one of these two
+    enum: ['income', 'expense'], 
     required: true
   },
   category: {
     type: String,
-    default: 'General'
+    default: 'Other' // 👈 Changed from 'General' to 'Other' for consistency
   },
   date: {
     type: Date,

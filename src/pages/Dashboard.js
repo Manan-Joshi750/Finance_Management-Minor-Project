@@ -47,14 +47,24 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/transactions');
+        // 👇 GRABBING THE TOKEN
+        const token = localStorage.getItem('userToken');
+        
+        // 👇 ATTACHING THE VIP PASS (TOKEN) TO THE REQUEST
+        const res = await axios.get('http://localhost:5000/api/transactions', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
         const mappedData = res.data.map(item => ({
           ...item,
-          id: item._id,     
+          id: item._id,    
           title: item.text, 
           amount: Math.abs(item.amount), 
           date: item.date
         }));
+        
         setTransactions(mappedData);
         setIsLoading(false);
       } catch (err) {
@@ -62,6 +72,7 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
+    
     fetchTransactions();
   }, []);
 
@@ -108,7 +119,16 @@ const Dashboard = () => {
         type: "income",
         category: "Other",
       };
-      const res = await axios.post('http://localhost:5000/api/transactions', newTx);
+      
+      // 👇 GRABBING THE TOKEN FOR THE ROLLOVER POST REQUEST
+      const token = localStorage.getItem('userToken');
+      
+      const res = await axios.post('http://localhost:5000/api/transactions', newTx, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
       const mappedTx = { ...res.data, id: res.data._id, title: res.data.text, amount: Math.abs(res.data.amount), date: res.data.date };
       setTransactions(prev => [...prev, mappedTx]);
       closeRolloverModal();
