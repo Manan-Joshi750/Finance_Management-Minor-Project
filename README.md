@@ -15,6 +15,7 @@ FinTrack is a full-stack (MERN ecosystem) personal finance application built to 
 * **Macro Metric Tiles:** Instantly query cumulative statistics for Total Income, Total Expenses, and Net Balance margins.
 * **50-30-20 Budget Tracker:** Live tracking automatically measures categorical distributions against the ideal rules of budgeting (50% Needs, 30% Wants, 20% Savings).
 * **Visual Spending Categorization:** Clean, color-coded donut graphs illustrate active resource distribution for fast overview analysis.
+* **Predictive Expense Forecasting:** Utilizes historical transaction data and moving average algorithms to forecast future spending trends for proactive budgeting.
 
 ### 🧾 Comprehensive Transaction Log & Utilities
 * **Smart Query Engine:** Search transaction logs instantly by descriptor strings, or segment entries using relational category types and specific date range guidelines.
