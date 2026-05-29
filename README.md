@@ -61,37 +61,44 @@ Finance_Management-Minor-Project/
 ## 💻 Environment Local Workspace Provisioning
 Follow these precise sequential routines to replicate and execute this ecosystem seamlessly across varying system terminals:
 
-1️⃣ Repository Cloning & Shell Entry
-Bash
+### 1️⃣ Repository Cloning & Shell Entry
+Open your terminal and run the following commands to copy the project to your local machine and step inside the folder:
+```bash
 git clone [https://github.com/Manan-Joshi750/Finance_Management-Minor-Project.git](https://github.com/Manan-Joshi750/Finance_Management-Minor-Project.git)
 cd Finance_Management-Minor-Project
+```
 
-2️⃣ Backend Initialization & Configuration
+### 2️⃣ Backend Initialization & Configuration
 Open an active shell window tracking the server subsystem root:
 
-Bash
+```bash
 cd backend
 npm install
+```
+
 Create a new file explicitly labeled .env directly within the backend/ directory path and anchor your local environmental keys inside it:
 
-Code snippet
+```bash
 MONGO_URI=mongodb+srv://<your_username>:<your_copied_atlas_password>@cluster0.tai2ci5.mongodb.net/fintrack?retryWrites=true&w=majority
 PORT=5000
 JWT_SECRET=your_custom_cryptographic_signing_key_string
+```
 ⚠️ CRITICAL WARNING: Ensure that your .gitignore configuration profile contains a distinct line reading .env prior to filing any commits to eliminate structural deployment data leaks.
 
 Fire up the active database processing engine thread:
 
-Bash
+```bash
 npm run dev
+```
 (Or fallback to npm start if nodemon tooling distributions aren't mapped locally inside the dependencies collection).
 
-3️⃣ Frontend Client Shell Deployment
+### 3️⃣ Frontend Client Shell Deployment
 Spawn a completely separate parallel shell instance running natively out of the fundamental source root:
 
-Bash
+```bash
 npm install
 npm start
+```
 The workspace automation scripts will execute initialization protocols and instantiate your default system browser viewport directed straight to your frontend development port: http://localhost:3000.
 
 ---
@@ -99,6 +106,6 @@ The workspace automation scripts will execute initialization protocols and insta
 ## 🛡️ Git & System Security Protocol
 This repository complies with precise environment asset separation logic rules. Core application secrets are dynamically extracted from environment runtimes, guaranteeing zero cloud exposure vectors for underlying infrastructure layers.
 
-Database Whitelists: Ensure current remote network ISP endpoints are appropriately whitelisted within the MongoDB Atlas Network Administration panel.
+**Database Whitelists:** Ensure current remote network ISP endpoints are appropriately whitelisted within the MongoDB Atlas Network Administration panel.
 
-Secret Management: If an environment signature leak ever occurs within historical commit tracking points, actively drop database user references instantly inside MongoDB Atlas management consoles to revoke the access vector immediately.
+**Secret Management:** If an environment signature leak ever occurs within historical commit tracking points, actively drop database user references instantly inside MongoDB Atlas management consoles to revoke the access vector immediately.
