@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit, FaChartPie, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit, FaChartPie, FaCheck, FaTimes, FaChartLine } from 'react-icons/fa';
 import SummaryCard from '../components/SummaryCard';
 import TransactionTable from '../components/TransactionTable';
 import TopCategoriesChart from '../components/TopCategoriesChart';
@@ -47,10 +47,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        // 👇 GRABBING THE TOKEN
         const token = localStorage.getItem('userToken');
         
-        // 👇 ATTACHING THE VIP PASS (TOKEN) TO THE REQUEST
         const res = await axios.get('http://localhost:5000/api/transactions', {
           headers: {
             Authorization: `Bearer ${token}`
@@ -120,7 +118,6 @@ const Dashboard = () => {
         category: "Other",
       };
       
-      // 👇 GRABBING THE TOKEN FOR THE ROLLOVER POST REQUEST
       const token = localStorage.getItem('userToken');
       
       const res = await axios.post('http://localhost:5000/api/transactions', newTx, {
@@ -164,6 +161,28 @@ const Dashboard = () => {
       return true;
     });
   }, [transactions, filterType]);
+
+  // 🔮 UPGRADED: Predictive Moving Average Algorithm
+  const predictedExpenses = useMemo(() => {
+    const expenseTxs = transactions.filter(tx => tx.type === 'expense');
+    if (expenseTxs.length === 0) return 0;
+
+    // Group historical expenses by month (YYYY-MM)
+    const monthlyTotals = {};
+    expenseTxs.forEach(tx => {
+      const d = new Date(tx.date);
+      const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+      monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + tx.amount;
+    });
+
+    // Extract the monthly totals into an array
+    const totalsArray = Object.values(monthlyTotals);
+
+    // Calculate Simple Moving Average (SMA) of up to the last 3 active months
+    const recentMonths = totalsArray.slice(-3);
+    const sum = recentMonths.reduce((acc, val) => acc + val, 0);
+    return sum / recentMonths.length;
+  }, [transactions]); // Crucial: We use ALL transactions to get true historical data, not just the filtered period!
 
   useEffect(() => {
     if (isLoading) return;
@@ -345,6 +364,24 @@ const Dashboard = () => {
           icon={FaWallet} 
           trend={summary.balance >= 0 ? 'up' : 'down'} 
         />
+      </div>
+
+      {/* 🔮 NEW: Predictive Expense Banner */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold flex items-center">
+            <FaChartLine className="mr-3" /> Predictive Expense Forecast
+          </h2>
+          <p className="text-purple-100 text-sm mt-1 max-w-lg">
+            Based on a moving average algorithm of your historical transaction data, we project your baseline expenses for the upcoming month.
+          </p>
+        </div>
+        <div className="text-left md:text-right bg-white bg-opacity-20 px-5 py-3 rounded-lg border border-purple-300 border-opacity-30">
+          <p className="text-xs text-purple-100 uppercase font-bold tracking-wider mb-1">Expected Spend</p>
+          <p className="text-2xl font-bold">
+            Rs. {predictedExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
       </div>
 
       {/* 🚀 UPGRADED: Actual vs Ideal 50-30-20 Rule Splitter */}
