@@ -1,0 +1,15 @@
+Date,Title,Category,Type,Amount
+2026-03-01,March Salary,Salary,income,100000
+2026-03-05,March Rent,Housing,expense,25000
+2026-03-15,March Groceries,Food,expense,15000
+2026-04-01,April Salary,Salary,income,100000
+2026-04-05,April Rent,Housing,expense,25000
+2026-04-10,Weekend Trip,Entertainment,expense,5000
+2026-04-20,April Electricity,Utilities,expense,5000
+2026-05-01,May Salary,Salary,income,120000
+2026-05-05,May Rent,Housing,expense,25000
+2026-05-12,May Groceries,Food,expense,12000
+2026-05-18,New Clothes,Shopping,expense,8000
+2026-05-25,Mutual Funds,Investment,expense,20000
+2026-06-01,June Salary,Salary,income,120000
+2026-06-05,June Rent,Housing,expense,25000

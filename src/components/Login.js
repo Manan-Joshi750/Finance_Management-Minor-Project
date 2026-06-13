@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaSignInAlt } from 'react-icons/fa';
 
-const Login = () => {
+const Login = ({ setToken }) => { // 👈 Accepting setToken prop here
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,11 +20,12 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // ✅ BOOM! Save the token and user data to local storage
         localStorage.setItem('userToken', data.token);
         localStorage.setItem('userName', data.name);
         
-        // Send them straight to the Dashboard
+        // ✅ Tell App.js that we have a live token! Navbar will show up immediately
+        setToken(data.token);
+        
         navigate('/');
       } else {
         setError(data.message);

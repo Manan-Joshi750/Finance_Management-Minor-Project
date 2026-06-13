@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaWallet, FaChartPie, FaList, FaPlus, FaBullseye, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
 
-const Navbar = () => {
+const Navbar = ({ setToken }) => { // 👈 Accepting setToken prop here
   const location = useLocation();
-  const navigate = useNavigate(); // <-- NEW: Allows us to trigger redirects
+  const navigate = useNavigate(); 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Helper to check if a link is active
   const isActive = (path) => {
     return location.pathname === path 
       ? "bg-blue-100 text-blue-800 font-bold"  
@@ -16,16 +15,13 @@ const Navbar = () => {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  // 🚪 NEW: The Logout Logic
   const handleLogout = () => {
-    // 1. Shred the VIP pass
     localStorage.removeItem('userToken');
+    localStorage.removeItem('userName');
     
-    // 2. Optional: Clear out other user-specific data so a new user starts fresh
-    // localStorage.removeItem('monthlyBudget'); 
-    // localStorage.removeItem('lastSeenMonth');
+    // ✅ Clear state immediately so Navbar unmounts dynamically
+    setToken(null);
     
-    // 3. Kick the user back to the login page
     navigate('/login');
   };
 
@@ -56,12 +52,10 @@ const Navbar = () => {
               <FaBullseye className="mr-2 text-red-500" /> Goals
             </Link>
             
-            {/* Add Button (Distinct Style) */}
             <Link to="/add" className="ml-4 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all duration-200 flex items-center transform hover:scale-105">
               <FaPlus className="mr-2" /> Add New
             </Link>
 
-            {/* 🚪 NEW: Logout Button (Desktop) */}
             <button 
               onClick={handleLogout} 
               className="ml-2 px-4 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 flex items-center border border-transparent hover:border-red-200"
@@ -70,7 +64,7 @@ const Navbar = () => {
             </button>
           </div>
 
-          {/* Mobile Menu Button (Hamburger) */}
+          {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -102,7 +96,6 @@ const Navbar = () => {
               <FaPlus className="inline mr-2" /> Add Transaction
             </Link>
 
-            {/* 🚪 NEW: Logout Button (Mobile) */}
             <button 
               onClick={() => {
                 handleLogout();
