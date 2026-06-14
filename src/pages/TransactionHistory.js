@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/api'; // 🔌 IMPORTING OUR NEW COMMAND CENTER
 import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaDownload, FaFileUpload, FaTrash, FaMagic, FaChevronDown } from 'react-icons/fa';
 import { parseSMS } from '../utils/smsParser'; 
 
@@ -46,7 +46,8 @@ const TransactionHistory = () => {
   const fetchTransactions = async () => {
     try {
       const token = localStorage.getItem('userToken');
-      const res = await axios.get('http://localhost:5000/api/transactions', {
+      // 🔥 UPDATED TO USE CENTRALIZED API
+      const res = await api.get('/transactions', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -136,7 +137,8 @@ const TransactionHistory = () => {
     if (window.confirm("Are you sure you want to delete this transaction?")) {
       try {
         const token = localStorage.getItem('userToken');
-        await axios.delete(`http://localhost:5000/api/transactions/${id}`, {
+        // 🔥 UPDATED TO USE CENTRALIZED API
+        await api.delete(`/transactions/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setTransactions(transactions.filter(tx => tx.id !== id));
@@ -159,7 +161,8 @@ const TransactionHistory = () => {
             type: tx.type,
             date: tx.date
         };
-        return axios.post('http://localhost:5000/api/transactions', backendTx, {
+        // 🔥 UPDATED TO USE CENTRALIZED API
+        return api.post('/transactions', backendTx, {
           headers: { Authorization: `Bearer ${token}` }
         });
       });
@@ -239,12 +242,19 @@ const TransactionHistory = () => {
     document.body.removeChild(a);
   };
 
-  // 🚀 MULTI-FORMAT IMPORT WITH SMART AUTO-TAGGING
+  // 🚀 MULTI-FORMAT IMPORT WITH SMART AUTO-TAGGING & INTERCEPT GUARD
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // 🛑 EARLY INTERCEPT GUARD: Shut down execution before initiating FileReader loops
     const fileExtension = file.name.split('.').pop().toLowerCase();
+    if (fileExtension !== 'csv' && fileExtension !== 'json') {
+      alert(`Invalid File Format (.${fileExtension.toUpperCase()}). Please upload strictly a .csv or .json file.`);
+      event.target.value = ''; // Erase standard input stream state
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -313,9 +323,6 @@ const TransactionHistory = () => {
               amount: parseFloat(item.amount || item.Amount)
             };
           }).filter(tx => tx.title && !isNaN(tx.amount));
-        } else {
-          alert("Unsupported file format. Please upload a .csv or .json file.");
-          return;
         }
 
         if (newTransactions.length > 0) {

@@ -10,7 +10,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// 🌐 BULLETPROOF CORS SETUP FOR PRODUCTION
+app.use(cors({
+  origin: '*', // Allows all domains (Perfect for hassle-free Vercel connection)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Explicitly allow these HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'] // Explicitly allow your JWT token header
+}));
 app.use(express.json());
 
 // Routes
