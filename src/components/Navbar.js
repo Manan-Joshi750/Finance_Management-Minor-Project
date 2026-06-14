@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaWallet, FaChartPie, FaList, FaPlus, FaBullseye, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+// 👈 NEW: Added FaInfoCircle to the imports
+import { FaWallet, FaChartPie, FaList, FaPlus, FaBullseye, FaBars, FaTimes, FaSignOutAlt, FaInfoCircle } from 'react-icons/fa';
 
-const Navbar = ({ setToken }) => { // 👈 Accepting setToken prop here
+const Navbar = ({ setToken }) => { 
   const location = useLocation();
   const navigate = useNavigate(); 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -51,6 +52,11 @@ const Navbar = ({ setToken }) => { // 👈 Accepting setToken prop here
             <Link to="/goals" className={`px-4 py-2 rounded-md text-sm transition-all duration-200 flex items-center ${isActive('/goals')}`}>
               <FaBullseye className="mr-2 text-red-500" /> Goals
             </Link>
+
+            {/* 👈 NEW: Desktop About Link */}
+            <Link to="/about" className={`px-4 py-2 rounded-md text-sm transition-all duration-200 flex items-center ${isActive('/about')}`}>
+              <FaInfoCircle className="mr-2 text-purple-500" /> About
+            </Link>
             
             <Link to="/add" className="ml-4 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all duration-200 flex items-center transform hover:scale-105">
               <FaPlus className="mr-2" /> Add New
@@ -90,6 +96,11 @@ const Navbar = ({ setToken }) => { // 👈 Accepting setToken prop here
 
             <Link to="/goals" onClick={closeMobileMenu} className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/goals')}`}>
               <FaBullseye className="mr-3 text-red-500" /> Goals
+            </Link>
+
+            {/* 👈 NEW: Mobile About Link */}
+            <Link to="/about" onClick={closeMobileMenu} className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${isActive('/about')}`}>
+              <FaInfoCircle className="mr-3 text-purple-500" /> About
             </Link>
             
             <Link to="/add" onClick={closeMobileMenu} className="mt-4 block w-full text-center px-4 py-3 rounded-md text-base font-bold bg-blue-600 text-white shadow-md">

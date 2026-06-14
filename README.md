@@ -17,6 +17,7 @@ FinTrack is a full-stack (MERN ecosystem) personal finance application built to 
 * **Dynamic 50-30-20 Budget Tracker:** Live tracking automatically measures categorical distributions against the golden rules of budgeting (50% Needs, 30% Wants, 20% Savings). Integrates directly with the rollover engine to dynamically modify base targets with extra allocated funds without artificially bloating actual income metrics.
 * **Predictive Expense Forecasting Banner:** Outfitted with an automated processing layer that analyzes historical transaction records. It utilizes a 3-month moving average algorithm to project upcoming baseline expenses into a clean, modern UI dashboard banner.
 * **Visual Spending Categorization:** Clean, color-coded donut graphs illustrate active resource distribution for fast overview analysis.
+* **About Us Page:** A dedicated credits section highlighting the project architecture and team contributions.
 
 ### 🧾 Comprehensive Transaction Log & Utilities
 * **Smart Query Engine:** Search transaction logs instantly by descriptor strings, or segment entries using relational category types and specific date range guidelines.
@@ -36,6 +37,19 @@ FinTrack is a full-stack (MERN ecosystem) personal finance application built to 
 | **Database** | MongoDB Atlas | Distributed cloud-hosted document database schemas |
 | **Security** | JSON Web Tokens (JWT) | Stateless secure payload exchange protocols |
 | | Bcrypt.js | Cryptographic hashing for local database authentication keys |
+
+---
+
+## 👥 Meet the Team
+
+* **[Manan Joshi](https://github.com/Manan-Joshi750)** — Lead Developer & Architect (Core Maintainer)
+  * Designed the system architecture, built the React frontend, developed the Node/Express APIs, and maintained the entire project codebase.
+* **[Vanshika Monga](https://github.com/Vanshika231)** — Project Contributor
+  * Assisted with project documentation, presentation structuring, and system testing.
+* **[Sandeep Singh](https://github.com/Sandeep-Singh1702)** — Project Contributor
+  * Contributed to UI/UX conceptualization and requirement gathering.
+* **[Mayank Sharma](https://github.com/Mayank27800)** — Project Contributor
+  * Contributed in the project documentation and presented crafty ideas.
 
 ---
 

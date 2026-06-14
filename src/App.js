@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionHistory from './pages/TransactionHistory';
 import FinancialGoals from './pages/FinancialGoals'; 
+import About from './pages/About'; // 👈 NEW: Imported the About page
 
 function App() {
   const [transactions, setTransactions] = useState([]);
@@ -125,6 +126,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <FinancialGoals transactions={transactions} />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* 👈 NEW: Protected About Route */}
+            <Route 
+              path="/about" 
+              element={
+                <ProtectedRoute>
+                  <About />
                 </ProtectedRoute>
               } 
             />
