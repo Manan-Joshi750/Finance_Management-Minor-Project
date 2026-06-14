@@ -1,19 +1,24 @@
 import axios from 'axios';
 
+// 🚀 BULLETPROOF ROUTING:
+// When deployed on Vercel (production), it forces your live Render URL.
+// When working locally on your machine (development), it switches back to localhost.
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://fintrack-backend-9lxh.onrender.com/api'
+  : 'http://localhost:5000/api';
+
 // Create a centralized Axios instance
 const api = axios.create({
-  // This automatically uses the live URL in production, and localhost in development
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Optional but highly recommended: 
-// If you are using JWT tokens for login, you can automate sending the token here
+// Automatically send JWT tokens for authentication if they exist in localStorage
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // Adjust this if you store your token differently
+    const token = localStorage.getItem('token'); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
