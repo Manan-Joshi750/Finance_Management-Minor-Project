@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './utils/api'; // 👈 NEW: Using centralized API instance
 import Navbar from './components/Navbar';
 
 // Auth Pages
@@ -12,15 +12,13 @@ import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionHistory from './pages/TransactionHistory';
 import FinancialGoals from './pages/FinancialGoals'; 
-import About from './pages/About'; // 👈 NEW: Imported the About page
+import About from './pages/About';
 
 function App() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  // 🔑 Centralized Token State to handle live reactive updates across components
   const [token, setToken] = useState(localStorage.getItem('userToken'));
 
-  // 🛡️ THE BOUNCER: Protects routes from unauthenticated users
   const ProtectedRoute = ({ children }) => {
     if (!token) {
       return <Navigate to="/login" replace />;
@@ -28,16 +26,15 @@ function App() {
     return children;
   };
 
-  // 🔌 FETCH DATA from Backend
   const fetchTransactions = useCallback(async () => {
-    // If no token, don't try to fetch data yet
     if (!token) {
       setLoading(false);
       return; 
     }
 
     try {
-      const res = await axios.get('http://localhost:5000/api/transactions', {
+      // 👈 NEW: Uses the api instance and relative path
+      const res = await api.get('/transactions', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -57,18 +54,16 @@ function App() {
       if (err.response && err.response.status === 401) {
         localStorage.removeItem('userToken');
         localStorage.removeItem('userName');
-        setToken(null); // Clear state instantly
+        setToken(null); 
       }
       setLoading(false);
     }
   }, [token]);
 
-  // Load data when App starts or when token changes
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  // Recalculate Balance
   const calculateCurrentBalance = () => {
     return transactions.reduce((acc, curr) => {
       return curr.type === 'income' 
@@ -80,16 +75,13 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">
-        {/* ✅ Reactive Evaluation: Navbar appears/disappears instantly on token change */}
         {token && <Navbar setToken={setToken} />}
         
         <main className="container mx-auto px-4 py-8">
           <Routes>
-            {/* 🔓 Public Routes */}
             <Route path="/login" element={<Login setToken={setToken} />} />
             <Route path="/register" element={<Register />} />
 
-            {/* 🔒 Protected Routes */}
             <Route 
               path="/" 
               element={
@@ -106,7 +98,6 @@ function App() {
                   <AddTransaction 
                     onTransactionAdded={fetchTransactions} 
                     currentBalance={calculateCurrentBalance()} 
-                    // Pass token down if needed or use from localStorage
                   />
                 </ProtectedRoute>
               } 
@@ -130,7 +121,6 @@ function App() {
               } 
             />
 
-            {/* 👈 NEW: Protected About Route */}
             <Route 
               path="/about" 
               element={

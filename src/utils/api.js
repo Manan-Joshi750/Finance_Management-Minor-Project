@@ -18,7 +18,8 @@ const api = axios.create({
 // Automatically send JWT tokens for authentication if they exist in localStorage
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); 
+    // 👇 FIXED: Now perfectly matches how your app saves the token!
+    const token = localStorage.getItem('userToken'); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

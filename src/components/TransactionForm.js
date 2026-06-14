@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../utils/api'; // 👈 NEW: Imported centralized API
 
 const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => {
   const [formData, setFormData] = useState({
@@ -10,7 +10,6 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     date: initialData.date || new Date().toISOString().split('T')[0],
   });
 
-  // 🚀 Added 'Savings' and 'Investment' to the dropdown list!
   const categories = [
     'Food', 'Shopping', 'Transport', 'Housing', 'Entertainment', 
     'Utilities', 'Healthcare', 'Education', 'Savings', 'Investment', 'Salary', 'Other'
@@ -36,10 +35,10 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
     };
 
     try {
-      // 🔐 THE FIX: Grab the keycard and attach it to the request header
       const token = localStorage.getItem('userToken');
       
-      const res = await axios.post('http://localhost:5000/api/transactions', transactionData, {
+      // 👈 NEW: Using api.post and relative route
+      const res = await api.post('/transactions', transactionData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -63,7 +62,6 @@ const TransactionForm = ({ onSubmit, initialData = {}, currentBalance = 0 }) => 
 
     } catch (err) {
       console.error('❌ Error saving transaction:', err);
-      // Give a more helpful error message if it's an auth issue
       if (err.response && err.response.status === 401) {
         alert('Session expired. Please log in again.');
       } else {

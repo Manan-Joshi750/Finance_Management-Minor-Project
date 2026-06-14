@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaSignInAlt } from 'react-icons/fa';
+import api from '../utils/api'; // 👈 NEW: Imported centralized API
 
-const Login = ({ setToken }) => { // 👈 Accepting setToken prop here
+const Login = ({ setToken }) => { 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,27 +12,18 @@ const Login = ({ setToken }) => { // 👈 Accepting setToken prop here
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      // 👈 NEW: Using the custom api instance instead of raw fetch
+      const response = await api.post('/users/login', { email, password });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('userToken', data.token);
-        localStorage.setItem('userName', data.name);
-        
-        // ✅ Tell App.js that we have a live token! Navbar will show up immediately
-        setToken(data.token);
-        
-        navigate('/');
-      } else {
-        setError(data.message);
-      }
+      localStorage.setItem('userToken', data.token);
+      localStorage.setItem('userName', data.name);
+      
+      setToken(data.token);
+      navigate('/');
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      // Safely catch backend error messages
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
     }
   };
 

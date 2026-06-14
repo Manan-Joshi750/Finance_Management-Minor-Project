@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaLock, FaUserPlus } from 'react-icons/fa';
+import api from '../utils/api'; // 👈 NEW: Imported centralized API
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -12,24 +13,16 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
+      // 👈 NEW: Using the custom api instance instead of raw fetch
+      const response = await api.post('/users/register', { name, email, password });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // ✅ Registration successful! Save token and log them in instantly
-        localStorage.setItem('userToken', data.token);
-        localStorage.setItem('userName', data.name);
-        navigate('/');
-      } else {
-        setError(data.message);
-      }
+      localStorage.setItem('userToken', data.token);
+      localStorage.setItem('userName', data.name);
+      navigate('/');
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      // Safely catch backend error messages
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
     }
   };
 

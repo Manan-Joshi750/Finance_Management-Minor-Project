@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import api from '../utils/api'; // 👈 NEW: Using centralized API instance
 import { FaArrowUp, FaArrowDown, FaWallet, FaFilter, FaEdit, FaChartPie, FaCheck, FaTimes, FaChartLine } from 'react-icons/fa';
 import SummaryCard from '../components/SummaryCard';
 import TransactionTable from '../components/TransactionTable';
@@ -36,7 +36,8 @@ const Dashboard = () => {
     const fetchTransactions = async () => {
       try {
         const token = localStorage.getItem('userToken');
-        const res = await axios.get('http://localhost:5000/api/transactions', {
+        // 👈 NEW: Replaced local URL with relative route using api instance
+        const res = await api.get('/transactions', {
           headers: { Authorization: `Bearer ${token}` }
         });
         const mappedData = res.data.map(item => ({
@@ -109,7 +110,8 @@ const Dashboard = () => {
       };
       
       const token = localStorage.getItem('userToken');
-      const res = await axios.post('http://localhost:5000/api/transactions', newTx, {
+      // 👈 NEW: Replaced local URL with relative route using api instance
+      const res = await api.post('/transactions', newTx, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -321,22 +323,22 @@ const Dashboard = () => {
               <div className="flex items-center mt-1">
                 <span className="text-3xl font-bold text-gray-800 mr-2">Rs. {summary.totalExpenses.toLocaleString()}</span>
                 <span className="text-gray-400 text-lg">
-                   / 
-                   {isEditingBudget ? (
-                     <input 
-                       type="number" value={budgetLimit} 
-                       onChange={(e) => handleBudgetChange(Number(e.target.value))}
-                       onBlur={() => setIsEditingBudget(false)} autoFocus
-                       className="w-24 border-b-2 border-blue-500 focus:outline-none ml-1 text-gray-600"
-                     />
-                   ) : (
-                     <span 
-                       onClick={() => setIsEditingBudget(true)} 
-                       className="cursor-pointer hover:text-blue-600 ml-1 border-b border-dashed border-gray-300"
-                     >
-                       Rs. {budgetLimit.toLocaleString()} <FaEdit className="inline w-3 h-3 mb-1"/>
-                     </span>
-                   )}
+                    / 
+                    {isEditingBudget ? (
+                      <input 
+                        type="number" value={budgetLimit} 
+                        onChange={(e) => handleBudgetChange(Number(e.target.value))}
+                        onBlur={() => setIsEditingBudget(false)} autoFocus
+                        className="w-24 border-b-2 border-blue-500 focus:outline-none ml-1 text-gray-600"
+                      />
+                    ) : (
+                      <span 
+                        onClick={() => setIsEditingBudget(true)} 
+                        className="cursor-pointer hover:text-blue-600 ml-1 border-b border-dashed border-gray-300"
+                      >
+                        Rs. {budgetLimit.toLocaleString()} <FaEdit className="inline w-3 h-3 mb-1"/>
+                      </span>
+                    )}
                 </span>
               </div>
             </div>
